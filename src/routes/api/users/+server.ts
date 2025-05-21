@@ -51,8 +51,7 @@ export const POST: RequestHandler = async ({ request, cookies }) => {
                     email: user.email,
                     username: user.username,
                     total_points: user.total_points,
-                    rank: user.rank,
-                    is_admin: user.is_admin
+                    rank: user.rank
                 }
             });
         } else {
@@ -70,10 +69,9 @@ export const POST: RequestHandler = async ({ request, cookies }) => {
             const [newUser] = await db.insert(users).values({
                 email,
                 password_hash: hashedPassword,
-                username: username || email.split('@')[0],
+                username: username || email.split('@')[0], // Use provided username or default from email
                 total_points: 0,
-                rank: 'Beginner',
-                is_admin: email.toLowerCase() === 'admin@admin.com' || username?.toLowerCase() === 'admin'
+                rank: 'Beginner'
             }).returning();
 
             const token = await generateToken(newUser.id);
@@ -94,8 +92,7 @@ export const POST: RequestHandler = async ({ request, cookies }) => {
                     email: newUser.email,
                     username: newUser.username,
                     total_points: newUser.total_points,
-                    rank: newUser.rank,
-                    is_admin: newUser.is_admin
+                    rank: newUser.rank
                 }
             }, { status: 201 });
         }

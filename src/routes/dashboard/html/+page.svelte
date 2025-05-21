@@ -4,6 +4,7 @@
     import Background from '$lib/Background.svelte';
     import { onMount } from 'svelte';
     import { enhance } from '$app/forms';
+    import { browser } from '$app/environment';
 
     export let data: PageData;
 
@@ -35,8 +36,19 @@
 
     // Add state for quiz creation form
     let showQuizForm = false;
-    let quizTypes: { id: number; name: string; description: string }[] = [];
-    let categories: { id: number; name: string }[] = [];
+    let quizTypes: { id: number; name: string; description: string }[] = [
+        { id: 1, name: 'Time Trial Quiz', description: 'Complete the quiz within a time limit' },
+        { id: 2, name: 'Spell Type Quiz', description: 'Test your spelling skills' },
+        { id: 3, name: 'Identification Quiz', description: 'Identify the correct answer' },
+        { id: 4, name: 'Multiple Choice Quiz', description: 'Select the correct answer from options' }
+    ];
+
+    let categories: { id: number; name: string }[] = [
+        { id: 1, name: 'HTML Basics' },
+        { id: 2, name: 'CSS Fundamentals' },
+        { id: 3, name: 'JavaScript Core' },
+        { id: 4, name: 'Web Development' }
+    ];
 
     let quizzes: {
         easy: Quiz[];
@@ -61,6 +73,17 @@
         options: []
     };
 
+    let isAdmin = false;
+
+    onMount(() => {
+        if (browser) {
+            isAdmin = localStorage.getItem('isAdmin') === 'true';
+            if (!isAdmin) {
+                showQuizForm = false; // Ensure quiz form is closed for non-admins
+            }
+        }
+    });
+
     function toggleQuizForm() {
         showQuizForm = !showQuizForm;
         console.log('Toggle quiz form:', showQuizForm); // Debug log
@@ -68,30 +91,12 @@
 
     onMount(async () => {
         try {
-            // Initialize database if needed
-            await fetch('/api/init', { method: 'POST' });
-
-            // Fetch quiz types
-            const quizTypesResponse = await fetch('/api/dashboard/quiz-types');
-            const quizTypesData = await quizTypesResponse.json();
-            quizTypes = quizTypesData;
-
-            // Fetch categories
-            const categoriesResponse = await fetch('/api/dashboard/categories');
-            const categoriesData = await categoriesResponse.json();
-            categories = categoriesData;
-
             // Fetch quizzes
             const quizzesResponse = await fetch('/api/dashboard/quizzes');
             const quizzesData = await quizzesResponse.json();
             quizzes = quizzesData;
         } catch (error) {
             console.error('Error fetching data:', error);
-            const errorMessage = document.createElement('div');
-            errorMessage.className = 'fixed top-4 right-4 bg-red-500 text-white px-6 py-3 rounded-lg shadow-lg z-50';
-            errorMessage.textContent = 'Failed to load quiz data. Please refresh the page.';
-            document.body.appendChild(errorMessage);
-            setTimeout(() => errorMessage.remove(), 3000);
         }
     });
 
@@ -210,15 +215,17 @@
 
     <main class="min-h-screen pt-20 px-4 relative z-10">
         <div class="max-w-7xl mx-auto space-y-16">
-            <!-- Add Quiz Creation Button -->
-            <div class="flex justify-end mb-8">
-                <button
-                    class="bg-purple-600 hover:bg-purple-700 text-white font-bold py-2 px-4 rounded-lg shadow-lg transition-all duration-300"
-                    on:click={toggleQuizForm}
-                >
-                    {showQuizForm ? 'Close Form' : 'Create New Quiz'}
-                </button>
-            </div>
+            <!-- Add Quiz Creation Button - Only visible to admin -->
+            {#if isAdmin}
+                <div class="flex justify-end mb-8">
+                    <button
+                        class="bg-purple-600 hover:bg-purple-700 text-white font-bold py-2 px-4 rounded-lg shadow-lg transition-all duration-300"
+                        on:click={toggleQuizForm}
+                    >
+                        {showQuizForm ? 'Close Form' : 'Create New Quiz'}
+                    </button>
+                </div>
+            {/if}
 
             <!-- Quiz Creation Form -->
             {#if showQuizForm}

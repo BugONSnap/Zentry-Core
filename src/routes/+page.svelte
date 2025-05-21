@@ -38,6 +38,12 @@
           return;
         }
 
+        // Store admin status in localStorage if login is successful
+        if (isLogin && data.user) {
+          const isAdmin = email.toLowerCase() === 'admin@gmail.com';
+          localStorage.setItem('isAdmin', isAdmin.toString());
+        }
+
         if (!isLogin) {
           successMessage = 'Registration successful! Redirecting to dashboard...';
           setTimeout(() => goto('/dashboard'), 1500);

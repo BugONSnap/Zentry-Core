@@ -17,13 +17,12 @@ const defaultQuizTypes = [
 
 export const users = sqliteTable('users', {
 	id: integer('id').primaryKey({ autoIncrement: true }),
-	username: text('username').notNull().unique(),
-	email: text('email').notNull().unique(),
+	username: text('username').notNull(),
+	email: text('email').notNull(),
 	password_hash: text('password_hash').notNull(),
-	created_at: text('created_at').default(sql`CURRENT_TIMESTAMP`),
+	created_at: text('created_at'),
 	total_points: integer('total_points').default(0),
-	rank: text('rank').default('Beginner'),
-	is_admin: integer('is_admin', { mode: 'boolean' }).default(false)
+	rank: text('rank')
 });
 
 export const categories = sqliteTable('categories', {
@@ -116,6 +115,34 @@ export const userHardProgress = sqliteTable('user_hard_progress', {
 	completed_at: text('completed_at'),
 	attempts: integer('attempts').default(0),
 	last_attempt: text('last_attempt')
+});
+
+export const quizzes = sqliteTable('quizzes', {
+	id: integer('id').primaryKey({ autoIncrement: true }),
+	title: text('title').notNull(),
+	description: text('description').notNull(),
+	points: integer('points').notNull(),
+	answer: text('answer').notNull(),
+	explanation: text('explanation').notNull(),
+	quiz_type_id: integer('quiz_type_id').notNull(),
+	category_id: integer('category_id').notNull(),
+	time_limit: integer('time_limit'),
+	options: text('options'),
+	difficulty: text('difficulty').notNull()
+});
+
+export const quizResults = sqliteTable('quiz_results', {
+	id: integer('id').primaryKey({ autoIncrement: true }),
+	user_id: integer('user_id')
+		.notNull()
+		.references(() => users.id),
+	quiz_id: integer('quiz_id')
+		.notNull()
+		.references(() => quizzes.id),
+	completed_at: text('completed_at').notNull(),
+	score: integer('score').notNull(),
+	time_taken: integer('time_taken'),
+	is_correct: integer('is_correct').notNull()
 });
 
 // Relations

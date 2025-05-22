@@ -8,6 +8,15 @@
 
     export let data: PageData;
 
+    // Define types for our level structure
+    interface Level {
+        id: number;
+        title: string;
+        difficulty: 'beginner' | 'medium' | 'hard';
+        isUnlocked: boolean;
+        quiz?: Quiz;
+    }
+
     interface Quiz {
         id: number;
         title: string;
@@ -19,6 +28,7 @@
         category_id: number;
         time_limit?: number;
         options?: string[];
+        locked: boolean;
     }
 
     interface QuizForm {
@@ -75,6 +85,24 @@
 
     let isAdmin = false;
 
+    // Reactive data for levels
+    let levels: Level[] = [
+        // Beginner Levels
+        { id: 1, title: 'HTML Basics', difficulty: 'beginner', isUnlocked: true },
+        { id: 2, title: 'Tags & Elements', difficulty: 'beginner', isUnlocked: false },
+        // Medium Levels
+        { id: 3, title: 'Forms', difficulty: 'medium', isUnlocked: false },
+        { id: 4, title: 'Semantic HTML', difficulty: 'medium', isUnlocked: false },
+        // Hard Levels
+        { id: 5, title: 'HTML5 APIs', difficulty: 'hard', isUnlocked: false },
+        { id: 6, title: 'Advanced HTML', difficulty: 'hard', isUnlocked: false },
+    ];
+
+    // Filter levels by difficulty
+    const beginnerLevels = levels.filter(level => level.difficulty === 'beginner');
+    const mediumLevels = levels.filter(level => level.difficulty === 'medium');
+    const hardLevels = levels.filter(level => level.difficulty === 'hard');
+
     onMount(() => {
         if (browser) {
             isAdmin = localStorage.getItem('isAdmin') === 'true';
@@ -91,10 +119,33 @@
 
     onMount(async () => {
         try {
-            // Fetch quizzes
-            const quizzesResponse = await fetch('/api/dashboard/quizzes');
+            // Fetch quizzes for HTML category
+            const quizzesResponse = await fetch('/api/dashboard/quizzes?category=html');
             const quizzesData = await quizzesResponse.json();
+            
+            if (quizzesData.error) {
+                throw new Error(quizzesData.error);
+            }
+
+            // Map quizzes to levels
+            levels = levels.map(level => {
+                let matchingQuiz;
+                if (level.difficulty === 'beginner') {
+                    matchingQuiz = quizzesData.easy.find(q => q.id === level.id);
+                } else if (level.difficulty === 'medium') {
+                    matchingQuiz = quizzesData.medium.find(q => q.id === level.id);
+                } else {
+                    matchingQuiz = quizzesData.hard.find(q => q.id === level.id);
+                }
+
+                return {
+                    ...level,
+                    quiz: matchingQuiz
+                };
+            });
+
             quizzes = quizzesData;
+            console.log('Loaded quizzes:', quizzes);
         } catch (error) {
             console.error('Error fetching data:', error);
         }
@@ -204,8 +255,19 @@
     }
 
     function handleQuizClick(quiz: Quiz) {
-        // Handle quiz selection/navigation
-        console.log('Selected quiz:', quiz);
+        // Navigate to quiz page with quiz parameters
+        window.location.href = `/dashboard/quiz?id=${quiz.id}&category=html`;
+    }
+
+    function handleLevelClick(level: Level) {
+        if (level.isUnlocked) {
+            // If the level has a quiz, use that ID, otherwise use the level ID
+            const quizId = level.quiz?.id || level.id;
+            window.location.href = `/dashboard/quiz?id=${quizId}&category=html`;
+        } else {
+            // Show locked message or requirement
+            console.log(`Level ${level.id} is locked`);
+        }
     }
 </script>
 
@@ -435,50 +497,62 @@
                 <!-- Beginner Area -->
                 <section class="area-container">
                     <h2 class="text-2xl font-bold mb-6 text-black">Beginner Area</h2>
-                    <div class="grid gap-4">
-                        {#each quizzes.easy as quiz (quiz.id)}
+                    <div class="books-grid">
+                        {#each quizzes.easy as quiz, index (quiz.id)}
                             <div 
-                                class="quiz-card bg-white/80 p-4 rounded-lg shadow-md hover:shadow-lg transition-all cursor-pointer"
+                                class="module-card"
                                 on:click={() => handleQuizClick(quiz)}
                             >
-                                <h3 class="font-bold text-lg text-gray-800">{quiz.title}</h3>
-                                <p class="text-sm text-gray-600 mt-1">Points: {quiz.points}</p>
-                        </div>
-                    {/each}
-                </div>
-            </section>
+                                <div class="module-content">
+                                    <h3 class="module-title">{quiz.title}</h3>
+                                    {#if quiz.locked}
+                                        <span class="lock-icon">🔒</span>
+                                    {/if}
+                                </div>
+                            </div>
+                        {/each}
+                    </div>
+                </section>
 
-            <!-- Medium Area -->
-            <section class="area-container">
+                <!-- Medium Area -->
+                <section class="area-container">
                     <h2 class="text-2xl font-bold mb-6 text-black">Medium Area</h2>
-                    <div class="grid gap-4">
-                        {#each quizzes.medium as quiz (quiz.id)}
+                    <div class="books-grid">
+                        {#each quizzes.medium as quiz, index (quiz.id)}
                             <div 
-                                class="quiz-card bg-white/80 p-4 rounded-lg shadow-md hover:shadow-lg transition-all cursor-pointer"
+                                class="module-card"
                                 on:click={() => handleQuizClick(quiz)}
                             >
-                                <h3 class="font-bold text-lg text-gray-800">{quiz.title}</h3>
-                                <p class="text-sm text-gray-600 mt-1">Points: {quiz.points}</p>
-                        </div>
-                    {/each}
-                </div>
-            </section>
+                                <div class="module-content">
+                                    <h3 class="module-title">{quiz.title}</h3>
+                                    {#if quiz.locked}
+                                        <span class="lock-icon">🔒</span>
+                                    {/if}
+                                </div>
+                            </div>
+                        {/each}
+                    </div>
+                </section>
 
-            <!-- Hard Area -->
-            <section class="area-container">
+                <!-- Hard Area -->
+                <section class="area-container">
                     <h2 class="text-2xl font-bold mb-6 text-black">Hard Area</h2>
-                    <div class="grid gap-4">
-                        {#each quizzes.hard as quiz (quiz.id)}
+                    <div class="books-grid">
+                        {#each quizzes.hard as quiz, index (quiz.id)}
                             <div 
-                                class="quiz-card bg-white/80 p-4 rounded-lg shadow-md hover:shadow-lg transition-all cursor-pointer"
+                                class="module-card"
                                 on:click={() => handleQuizClick(quiz)}
                             >
-                                <h3 class="font-bold text-lg text-gray-800">{quiz.title}</h3>
-                                <p class="text-sm text-gray-600 mt-1">Points: {quiz.points}</p>
-                        </div>
-                    {/each}
-                </div>
-            </section>
+                                <div class="module-content">
+                                    <h3 class="module-title">{quiz.title}</h3>
+                                    {#if quiz.locked}
+                                        <span class="lock-icon">🔒</span>
+                                    {/if}
+                                </div>
+                            </div>
+                        {/each}
+                    </div>
+                </section>
             </div>
         </div>
     </main>
@@ -491,17 +565,85 @@
         padding: 2rem;
         border-radius: 1rem;
         transition: transform 0.3s ease;
+        margin-bottom: 2rem;
     }
 
-    .area-container:hover {
+    .books-grid {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 2rem;
+        padding: 1rem;
+    }
+
+    .module-card {
+        background-image: url('/Module cover.png');
+        background-size: cover;
+        background-position: center;
+        border-radius: 6px;
+        width: 220px;
+        height: 301px;
+        cursor: pointer;
+        position: relative;
+        box-shadow: 0 4px 8px rgba(0,0,0,0.3);
+        transition: all 0.3s ease;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        text-align: center;
+        padding: 20px;
+    }
+
+    .module-card::before {
+        content: '';
+        position: absolute;
+        top: 0;
+        left: 0;
+        right: 0;
+        bottom: 0;
+        background: rgba(0, 0, 0, 0.3);
+        pointer-events: none;
+        border-radius: 6px;
+    }
+
+    .module-card:hover {
         transform: translateY(-5px);
+        box-shadow: 0 8px 16px rgba(0,0,0,0.4);
     }
 
-    .quiz-card {
-        transition: all 0.2s ease;
+    .module-content {
+        position: relative;
+        z-index: 1;
+        width: 100%;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
     }
 
-    .quiz-card:hover {
-        transform: translateY(-2px);
+    .module-title {
+        font-size: 1.8rem;
+        font-weight: bold;
+        color: #ffffff;
+        text-shadow: 2px 2px 4px rgba(0,0,0,0.5);
+        text-align: center;
+        line-height: 1.3;
+    }
+
+    .lock-icon {
+        font-size: 1.5rem;
+        display: block;
+        margin-top: 1rem;
+        color: #ffffff;
+    }
+
+    @media (max-width: 640px) {
+        .books-grid {
+            justify-content: center;
+        }
+        
+        .module-card {
+            width: 180px;
+            height: 247px;
+        }
     }
 </style>

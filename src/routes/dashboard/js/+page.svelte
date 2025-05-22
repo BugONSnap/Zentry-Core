@@ -34,8 +34,8 @@
     // Handle level click
     function handleLevelClick(level: Level) {
         if (level.isUnlocked) {
-            // Navigate to level or show level content
-            console.log(`Navigating to level ${level.id}`);
+            // Navigate to quiz page with level parameters
+            window.location.href = `/dashboard/quiz?id=${level.id}&category=js`;
         } else {
             // Show locked message or requirement
             console.log(`Level ${level.id} is locked`);

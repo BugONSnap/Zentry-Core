@@ -18,7 +18,7 @@
     let currentHint = '';
 
     // Split explanation into progressive hints
-    const hints = data.quiz.explanation.split('. ')
+    const hints = (data.quiz.explanation || '').split('. ')
         .filter(hint => hint.trim().length > 0)
         .map(hint => hint.trim() + (hint.endsWith('.') ? '' : '.'));
 
@@ -83,6 +83,34 @@
 
         if (isCorrect) {
             clearInterval(timerInterval);
+            
+            // Calculate time taken
+            const timeTaken = data.quiz.time_limit ? data.quiz.time_limit - timeLeft : 0;
+            
+            // Save quiz result
+            try {
+                const response = await fetch('/api/quiz/result', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({
+                        quizId: data.quiz.id,
+                        timeTaken,
+                        isCorrect: true,
+                        difficulty: data.quiz.difficulty
+                    })
+                });
+
+                const result = await response.json();
+                if (!result.success) {
+                    console.error('Failed to save quiz result:', result.error);
+                }
+            } catch (err) {
+                console.error('Error saving quiz result:', err);
+            }
+
+            // Navigate to dashboard after successful completion
             setTimeout(() => {
                 const category = $page.url.searchParams.get('category');
                 goto(`/dashboard/${category}`);

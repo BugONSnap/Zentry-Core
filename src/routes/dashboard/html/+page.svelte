@@ -1,6 +1,6 @@
 <script lang="ts">
     import type { PageData } from './$types';
-    import Header from '$lib/header.svelte';
+    import Header from '$lib/Header.svelte';
     import Background from '$lib/Background.svelte';
     import { onMount } from 'svelte';
     import { enhance } from '$app/forms';

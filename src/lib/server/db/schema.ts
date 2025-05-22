@@ -3,7 +3,7 @@ import { relations, sql } from 'drizzle-orm';
 
 export const quizTypes = sqliteTable('quiz_types', {
 	id: integer('id').primaryKey({ autoIncrement: true }),
-	name: text('name').notNull().unique(),
+	name: text('name').notNull(),
 	description: text('description')
 });
 
@@ -40,8 +40,8 @@ export const badges = sqliteTable('badges', {
 
 export const userBadges = sqliteTable('user_badges', {
 	id: integer('id').primaryKey({ autoIncrement: true }),
-	user_id: integer('user_id').notNull().references(() => users.id),
-	badge_id: integer('badge_id').notNull().references(() => badges.id),
+	user_id: integer('user_id').notNull().references(() => users.id, { onDelete: 'cascade', onUpdate: 'cascade' }),
+	badge_id: integer('badge_id').notNull().references(() => badges.id, { onDelete: 'cascade', onUpdate: 'cascade' }),
 	earned_at: text('earned_at').default(sql`CURRENT_TIMESTAMP`)
 });
 
@@ -117,28 +117,11 @@ export const userHardProgress = sqliteTable('user_hard_progress', {
 	last_attempt: text('last_attempt')
 });
 
-export const quizzes = sqliteTable('quizzes', {
-	id: integer('id').primaryKey({ autoIncrement: true }),
-	title: text('title').notNull(),
-	description: text('description').notNull(),
-	points: integer('points').notNull(),
-	answer: text('answer').notNull(),
-	explanation: text('explanation').notNull(),
-	quiz_type_id: integer('quiz_type_id').notNull(),
-	category_id: integer('category_id').notNull(),
-	time_limit: integer('time_limit'),
-	options: text('options'),
-	difficulty: text('difficulty').notNull()
-});
-
 export const quizResults = sqliteTable('quiz_results', {
 	id: integer('id').primaryKey({ autoIncrement: true }),
-	user_id: integer('user_id')
-		.notNull()
-		.references(() => users.id),
-	quiz_id: integer('quiz_id')
-		.notNull()
-		.references(() => quizzes.id),
+	user_id: integer('user_id').notNull().references(() => users.id),
+	challenge_id: integer('challenge_id').notNull(), // ID from the challenge table
+	challenge_type: text('challenge_type').notNull(), // 'easy', 'medium', or 'hard'
 	completed_at: text('completed_at').notNull(),
 	score: integer('score').notNull(),
 	time_taken: integer('time_taken'),

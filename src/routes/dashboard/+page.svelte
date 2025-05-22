@@ -1,16 +1,12 @@
 <script lang="ts">
     import type { PageData } from './$types';
     import Background from '../../lib/Background.svelte';
-    import Header from '../../lib/header.svelte';
+    import Header from '$lib/Header.svelte';
 
     let { data }: { data: PageData } = $props();
 
-    // Dummy data for the leaderboard
-    let players = [
-        { name: "Player1", xp: 1500, ranking: 1 },
-        { name: "Player2", xp: 1200, ranking: 2 },
-        { name: "Player3", xp: 900, ranking: 3 }
-    ];
+    // Use the real leaderboard data from the API
+    let players = $derived(data.leaderboard);
 </script>
 
 <div class="relative min-h-screen w-full overflow-x-hidden">

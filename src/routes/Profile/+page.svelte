@@ -1,7 +1,7 @@
 <script lang="ts">
     import type { PageData } from './$types';
     import Background from '../../lib/Background.svelte';
-    import Header from '../../lib/header.svelte';
+    import Header from '$lib/Header.svelte';
 
     export let data: PageData;
     let error = data.error || '';

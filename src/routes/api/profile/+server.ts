@@ -1,22 +1,29 @@
 import { json } from '@sveltejs/kit';
 import { db } from '$lib/server/db';
 import { eq } from 'drizzle-orm';
-import { users, quizResults, quizzes } from '$lib/server/db/schema';
+import { users, quizResults, easyChallenges, mediumChallenges, hardChallenges } from '$lib/server/db/schema';
+import { verifyToken } from '$lib/server/auth';
 
 export async function GET({ locals, cookies }) {
     try {
         // Get user ID from session cookie
-        const userId = cookies.get('userId');
-        console.log('Session user ID:', userId);
-
-        if (!userId) {
-            console.log('No user ID found in session');
+        const sessionToken = cookies.get('session');
+        if (!sessionToken) {
+            console.log('No session found');
             return json({ error: 'Unauthorized - No session found' }, { status: 401 });
         }
 
+        // Verify the session token and get the user ID
+        const payload = await verifyToken(sessionToken);
+        if (!payload) {
+            return json({ error: 'Invalid session' }, { status: 401 });
+        }
+
+        const userId = payload.userId;
+
         // Fetch user data
         const userData = await db.query.users.findFirst({
-            where: eq(users.id, parseInt(userId))
+            where: eq(users.id, userId)
         });
 
         console.log('User data found:', !!userData);
@@ -25,24 +32,43 @@ export async function GET({ locals, cookies }) {
             return json({ error: 'User not found' }, { status: 404 });
         }
 
-        // Fetch quiz results for the user
-        const results = await db.select()
+        // Fetch quiz results for each difficulty level
+        const easyResults = await db.select()
             .from(quizResults)
-            .where(eq(quizResults.user_id, parseInt(userId)))
-            .leftJoin(quizzes, eq(quizResults.quiz_id, quizzes.id));
+            .where(eq(quizResults.user_id, userId))
+            .leftJoin(easyChallenges, eq(quizResults.quiz_id, easyChallenges.id));
 
-        console.log('Quiz results found:', results.length);
+        const mediumResults = await db.select()
+            .from(quizResults)
+            .where(eq(quizResults.user_id, userId))
+            .leftJoin(mediumChallenges, eq(quizResults.quiz_id, mediumChallenges.id));
+
+        const hardResults = await db.select()
+            .from(quizResults)
+            .where(eq(quizResults.user_id, userId))
+            .leftJoin(hardChallenges, eq(quizResults.quiz_id, hardChallenges.id));
+
+        // Combine all results
+        const allResults = [
+            ...easyResults.map(r => ({ ...r, difficulty: 'easy' })),
+            ...mediumResults.map(r => ({ ...r, difficulty: 'medium' })),
+            ...hardResults.map(r => ({ ...r, difficulty: 'hard' }))
+        ];
+
+        console.log('Quiz results found:', allResults.length);
 
         // Calculate progress for each category
         const progress = {
-            css: calculateProgress(results, 2), // CSS category_id is 2
-            html: calculateProgress(results, 1), // HTML category_id is 1
-            javascript: calculateProgress(results, 3) // JavaScript category_id is 3
+            css: calculateProgress(allResults, 2), // CSS category_id is 2
+            html: calculateProgress(allResults, 1), // HTML category_id is 1
+            javascript: calculateProgress(allResults, 3) // JavaScript category_id is 3
         };
 
         return json({
             username: userData.username,
             email: userData.email,
+            total_points: userData.total_points,
+            rank: userData.rank,
             progress
         });
     } catch (error) {
@@ -52,9 +78,10 @@ export async function GET({ locals, cookies }) {
 }
 
 function calculateProgress(results: any[], categoryId: number) {
-    const categoryQuizzes = results.filter(result => 
-        result.quizzes.category_id === categoryId
-    );
+    const categoryQuizzes = results.filter(result => {
+        const quiz = result.easy_challenges || result.medium_challenges || result.hard_challenges;
+        return quiz && quiz.category_id === categoryId;
+    });
 
     const completedTasks = categoryQuizzes.length;
     const totalTasks = 50; // You might want to fetch this from your database
@@ -70,7 +97,11 @@ function calculateProgress(results: any[], categoryId: number) {
 
     // Get the last completed quiz
     const lastCompleted = categoryQuizzes
-        .sort((a, b) => new Date(b.quiz_results.completed_at).getTime() - new Date(a.quiz_results.completed_at).getTime())[0]?.quizzes.title || 'None';
+        .sort((a, b) => new Date(b.quiz_results.completed_at).getTime() - new Date(a.quiz_results.completed_at).getTime())
+        .map(result => {
+            const quiz = result.easy_challenges || result.medium_challenges || result.hard_challenges;
+            return quiz?.title || 'None';
+        })[0] || 'None';
 
     return {
         percentage,
@@ -93,4 +124,5 @@ function getCategoryId(category: string): number {
         default:
             return 0;
     }
+} 
 } 
